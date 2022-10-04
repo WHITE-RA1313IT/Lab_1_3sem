@@ -1,4 +1,5 @@
 ﻿#include <iostream>
+#include <string>
 #include <cstdint>
 #include <random>
 using namespace std;
@@ -84,25 +85,53 @@ class RSA {
 public:
     int64_t p, q, e;
     string encrypt(string text) {
-        string encrypted_text = text;
-        p = generatorPrime();
-        q = generatorPrime();
+        int64_t p = generatorPrime(), q = generatorPrime(), f = (p - 1) * (q - 1), e = mutuallyPrime(f);
         n = p * q;
-        f = (p - 1) * (q - 1);
-        e = mutuallyPrime(f);
-        d = mutuallyInverse(e, f);
+        if (mutuallyInverse(e, f) < 0) d = f + mutuallyInverse(e, f);
+        else d = mutuallyInverse(e, f);
         cout << "P = " << p << "; Q = " << q << "; N = " << n << "; Phi = " << f << "; E = " << e << "; D = " << d << endl;
 
-        for (int i = 0; i < encrypted_text.length(); i++) {
-            encrypted_text[i] = mod(encrypted_text[i], e, n);
+        string source_text = text, encrypted_text;
+
+        cout << source_text << " : ";
+        for (auto x : source_text) {
+            cout << int(x) << " ";
         }
+        cout << endl;
+
+        for (auto x : source_text) {
+            encrypted_text += to_string(mod(x, e, n)) + ' ';
+            cout << char(mod(x, e, n));
+        }
+
+        cout << " : ";
+
+        for (auto x : encrypted_text) {
+            if (x != ' ') {
+                cout << x;
+            }
+            else {
+                cout << ' ';
+            }
+        }
+
         return encrypted_text;
     }
     string decrypt(string text) {
-        string decrypted_text = text;
-        for (int i = 0; i < decrypted_text.length(); i++) {
-            decrypted_text[i] = mod(decrypted_text[i], d, n);
+        string encrypted_text = text, decrypted_text;
+        int64_t value = 0;
+        for (auto x : encrypted_text) {
+            if (x != ' ') {
+                value *= 10;
+                value += x - '0';
+            }
+            else {
+                value = mod(value, d, n);
+                decrypted_text += char(value);
+                value = 0;
+            }
         }
+        cout << endl;
         return decrypted_text;
     }
 private:
@@ -203,7 +232,4 @@ int main() {
     cout << enc_text << endl;
     dec_text = rsa.decrypt(enc_text);
     cout << dec_text << endl;
-    for (auto x : dec_text) {
-        cout << int(x) << " ";
-    }
 }
