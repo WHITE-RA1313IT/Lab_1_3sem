@@ -2,89 +2,8 @@
 #include <Windows.h>
 #include <string>
 #include <cstdint>
-#include <random>
+#include "Math.h"
 using namespace std;
-
-int64_t generator(int64_t num) {
-    random_device rd;
-    mt19937_64 gen(rd());
-    uniform_int_distribution<> dist(400, num);
-    int64_t x = dist(gen);
-
-    return x;
-}
-
-bool checkPrime(int64_t num) {
-    for (int i = 2; i < num; i++) {
-        if (num % i == 0)
-        {
-            return false;
-            break;
-        }
-    }
-    return true;
-}
-
-int64_t generatorPrime(int64_t num) {
-    random_device rd;
-    mt19937_64 gen(rd());
-    uniform_int_distribution<> dist(400, num);
-
-    int64_t x = dist(gen);
-    while (!checkPrime(x)) {
-        x++;
-    }
-    return x;
-}
-
-int64_t mutuallyPrime(int64_t euler_func) {
-    random_device rd;
-    mt19937_64 gen(rd());
-
-    int64_t a0 = euler_func, a, b = 0, b0;
-    uniform_int_distribution<> dist(2, a0);
-
-    while (b != 1) {
-        a = a0, b0 = dist(gen), b = b0;
-        while (a % b != 0) {
-            a %= b;
-            swap(a, b);
-        }
-    }
-    return b0;
-}
-
-int64_t mutuallyInverse(int64_t num, int64_t euler_func) {
-    int64_t a = num, a0 = a, b = euler_func, x0 = 1, y0 = 0, x = 0, y = 1, q;
-    while (a % b != 0) {
-        q = a / b;
-        a %= b;
-        swap(a, b);
-
-        x0 -= q * x;
-        swap(x0, x);
-
-        y0 -= q * y;
-        swap(y0, y);
-    }
-    if (x < 0) x += euler_func;
-    return x;
-}
-
-int64_t mod(int64_t a0, int64_t x0, int64_t p0) {
-    int64_t a = a0, x = x0, q = 1, p = p0;
-    while (x > 0) {
-        if (x % 2 == 0) {
-            x /= 2;
-            a = (a * a) % p;
-        }
-        else {
-            x--;
-            q = (a * q) % p;
-        }
-    }
-    return q;
-}
 
 class DH {
 public:
@@ -119,7 +38,7 @@ private:
 
 class RSA {
 public:
-    int64_t p, q, public_key, n;
+    int64_t p, q, public_key, n, M, C;
     
     void gen_p() {
         p = generatorPrime(10000);
@@ -145,6 +64,14 @@ public:
         private_key = mutuallyInverse(public_key, euler_func);
     }
 
+    void encrypt(int64_t message) {
+        C = mod(message, public_key, n);
+    }
+
+    void decrypt(int64_t ciphertext) {
+        M = mod(ciphertext, private_key, n);
+    }
+
     int64_t GetPrivateKey() {
         return private_key;
     }
@@ -154,209 +81,79 @@ private:
 
 class Shamir {
 public:
-    int64_t p;
-    string encrypt_x1(string text) {
-        string source_text = text, encrypted_text = "";
-        for (auto x : source_text) {
-            encrypted_text += to_string(mod(x, ax, p)) + ' ';
-        }
-        return encrypted_text;
+    int64_t p, M;
+
+    void gen_p() {
+        p = generatorPrime(100000);
     }
 
-    string encrypt_x2(string text) {
-        string source_text = text, encrypted_text = "";
-        int64_t value = 0;
-        for (auto x : source_text) {
-            if (x != ' ') {
-                value *= 10;
-                value += x - '0';
-            }
-            else {
-                encrypted_text += to_string(mod(value, bx, p)) + ' ';
-                value = 0;
-            }
-        }
-        return encrypted_text;
+    void select_ax() {
+        ax = mutuallyPrime(p - 1);
     }
 
-    string encrypt_x3(string text) {
-        string source_text = text, encrypted_text = "";
-        int64_t value = 0;
-        for (auto x : source_text) {
-            if (x != ' ') {
-                value *= 10;
-                value += x - '0';
-            }
-            else {
-                encrypted_text += to_string(mod(value, ay, p)) + ' ';
-                value = 0;
-            }
-        }
-        return encrypted_text;
+    void select_ay() {
+        ay = mutuallyInverse(ax, p - 1);
     }
-    
-    string decrypt_x4(string text) {
-        string encrypted_text = text, decrypted_text;
-        int64_t value = 0;
-        for (auto x : encrypted_text) {
-            if (x != ' ') {
-                value *= 10;
-                value += x - '0';
-            }
-            else {
-                decrypted_text += char(mod(value, by, p));
-                value = 0;
-            }
-        }
-        return decrypted_text;
+
+    void calc_M(int64_t message, int64_t a) {
+        M = mod(message, a, p);
     }
 
     int64_t Get_ax() {
         return ax;
     }
 
-    void Set_ax(int64_t ax0) {
-        ax = ax0;
-    }
-
     int64_t Get_ay() {
         return ay;
     }
-
-    void Set_ay(int64_t ay0) {
-        ay = ay0;
-    }
-
-    int64_t Get_bx() {
-        return bx;
-    }
-
-    void Set_bx(int64_t bx0) {
-        bx = bx0;
-    }
-
-    int64_t Get_by() {
-        return by;
-    }
-
-    void Set_by(int64_t by0) {
-        by = by0;
-    }
-
-    int64_t generator() {
-        random_device rd;
-        mt19937_64 gen(rd());
-        uniform_int_distribution<> dist(256, 10000);
-        int64_t x = dist(gen);
-
-        return x;
-    }
-    int64_t generatorPrime() {
-        random_device rd;
-        mt19937_64 gen(rd());
-        uniform_int_distribution<> dist(256, 10000);
-
-        int64_t x = dist(gen);
-        while (!checkPrime(x)) {
-            x++;
-        }
-        return x;
-    }
 private:
-    int64_t ax, ay, bx, by;
-    bool checkPrime(int64_t num) {
-        for (int i = 2; i < num; i++) {
-            if (num % i == 0)
-            {
-                return false;
-                break;
-            }
-        }
-        return true;
-    }
+    int64_t ax, ay;
 };
 
 class ElGamal {
 public:
-    int64_t p, g, y;
-    string encrypt(string text) {
+    int64_t p, g, public_key, a, b, M;
+
+    void gen_p() {
         p = generatorPrime(10000);
-        g = generatorPrime(p);
-        x = generator(p);
-        y = mod(g, x, p);
-        k = generator(p - 1);
-        a = mod(g, k, p);
-        string source_text = text, encrypted_text;
-
-        cout << source_text << " : ";
-        for (auto i : source_text) {
-            cout << int(i) << " ";
-        }
-        cout << endl;
-
-        for (auto i : source_text) {
-            encrypted_text += to_string(i * mod(y, k, p) % p) + ' ';
-            cout << char(i * mod(y, k, p) % p);
-        }
-
-        cout << " : ";
-
-        cout << encrypted_text << endl;
-
-        return encrypted_text;
     }
-    string decrypt(string text) {
-        string encrypted_text = text, decrypted_text;
-        int64_t value = 0;
-        for (auto i : encrypted_text) {
-            if (i != ' ') {
-                value *= 10;
-                value += i - '0';
-            }
-            else {
-                decrypted_text += char(value * mod(a, p - 1 - x, p) % p);
-                value = 0;
-            }
-        }
-        cout << endl;
-        return decrypted_text;
+
+    void gen_g() {
+        g = generatorPrime(10000);
+    }
+
+    void selectPrivateKey() {
+        private_key = generator(p - 1);
+    }
+
+    void calcPublicKey() {
+        public_key = mod(g, private_key, p);
+    }    
+
+    void select_k() {
+        k = mutuallyPrime(p - 1);
+    }
+
+    void calc_A() {
+        a = mod(g, k, p);
+    }
+
+    void calc_B() {
+        b = (M * mod(public_key, k, p)) % p;
+    }
+
+    void calc_M() {
+        M = b * mod(a, p - 1 - private_key, p) % p;
+    }
+
+    int64_t Get_k() {
+        return k;
     }
 private:
-    int64_t x, k, a;
-    bool checkPrime(int64_t num) {
-        for (int i = 2; i < num; i++) {
-            if (num % i == 0)
-            {
-                return false;
-                break;
-            }
-        }
-        return true;
-    }
-
-    int64_t generator(int64_t p) {
-        random_device rd;
-        mt19937_64 gen(rd());
-        uniform_int_distribution<> dist(256, p);
-        int64_t x = dist(gen);
-
-        return x;
-    }
-
-    int64_t generatorPrime(int64_t p) {
-        random_device rd;
-        mt19937_64 gen(rd());
-        uniform_int_distribution<> dist(256, p);
-
-        int64_t x = dist(gen);
-        while (!checkPrime(x)) {
-            x++;
-        }
-        return x;
-    }
+    int64_t private_key, k;
 };
 
-void diffiehellman() {
+void diffiehellman(string str) {
     DH Alice, Bob;
     Alice.gen_g();
     Alice.gen_p();
@@ -371,11 +168,10 @@ void diffiehellman() {
     Alice.calcKey(Bob.public_key);
     Bob.calcKey(Alice.public_key);
 
-    string str, encrypted_text, decrypted_text;
-    getline(cin, str);
+    string encrypted_text, decrypted_text;
 
     for (int i = 0; i < str.length(); i++) {
-        encrypted_text += str[i] + Alice.Get_key() % 27;
+        encrypted_text += str[i] + Bob.Get_key() % 27;
     }
 
     for (int i = 0; i < encrypted_text.length(); i++) {
@@ -385,7 +181,7 @@ void diffiehellman() {
     cout << "Alice: " << str << " --> Message: " << encrypted_text << " --> Bob: " << decrypted_text;
 }
 
-void rsa() {
+void rsa(string str) {
     RSA Alice, Bob;
     Alice.p = generatorPrime(10000);
     Alice.q = generatorPrime(10000);
@@ -397,140 +193,116 @@ void rsa() {
     Bob.public_key = Alice.public_key;
     Bob.n = Alice.n;
 
-    string str, encrypted_text, decrypted_text;
-    getline(cin, str);
+    string decrypted_text;
+
     cout << "Bob: " << str << " --> Message: ";
     for (auto x : str) {
-        encrypted_text += to_string(mod(x, Bob.public_key, Bob.n)) + ' ';
-        //cout << char(mod(x, Bob.public_key, Bob.public_key));
+        Bob.encrypt(x);
+        cout << Bob.C << " ";
+        Alice.decrypt(Bob.C);
+        decrypted_text += char(Alice.M);
     }
-    int64_t value = 0;
-    for (auto x : encrypted_text) {
-        if (x != ' ') {
-            value *= 10;
-            value += x - '0';
-        }
-        else {
-            value = mod(value, Alice.GetPrivateKey(), Alice.n);
-            decrypted_text += char(value);
-            value = 0;
-        }
-    }
-    cout << encrypted_text << " --> Alice: " << decrypted_text;
+    cout << " --> Alice: " << decrypted_text;
 }
 
-void shamir() {
+void shamir(string str) {
     Shamir Alice, Bob;
-    string str = "Hello", x1, x2, x3, x4;
+    Alice.gen_p();
+    Alice.select_ax();
+    Alice.select_ay();
 
-    Alice.p = Alice.generatorPrime();
     Bob.p = Alice.p;
+    Bob.select_ax();
+    Bob.select_ay();
 
-    Alice.Set_ax(mutuallyPrime(Alice.p - 1));
+    string x1, x2, x3, decrypted_text;
+
     for (auto x : str) {
-        x1 += to_string(mod(x, Alice.Get_ax(), Alice.p)) + ' ';
-    }
-
-    int64_t value = 0;
-    Bob.Set_bx(mutuallyPrime(Bob.p - 1));
-    for (auto x : x1) {
-        if (x != ' ') {
-            value *= 10;
-            value += x - '0';
-        }
-        else {
-            x2 += to_string(mod(value, Bob.Get_bx(), Bob.p)) + ' ';
-            value = 0;
-        }
-    }
-
-    value = 0;
-    Alice.Set_ay(mutuallyInverse(Alice.Get_ax(), Alice.p - 1));
-    for (auto x : x2) {
-        int64_t value = 0;
-        if (x != ' ') {
-            value *= 10;
-            value += x - '0';
-        }
-        else {
-            x3 += to_string(mod(value, Alice.Get_ay(), Alice.p)) + ' ';
-            cout << value << endl;
-            value = 0;
-        }
-    }
-
-    value = 0;
-    Bob.Set_by(mutuallyInverse(Bob.Get_bx(), Bob.p - 1));
-    cout << Bob.Get_bx() << " " << Bob.Get_by() << " " << mutuallyInverse(Bob.Get_by(), Bob.p - 1) << endl;
-    for (auto x : x3) {
-        int64_t value = 0;
-        if (x != ' ') {
-            value *= 10;
-            value += x - '0';
-        }
-        else {
-            x4 += to_string(mod(value, Bob.Get_by(), Bob.p)) + ' ';
-            value = 0;
-        }
+        Alice.calc_M(x, Alice.Get_ax());
+        x1 += char(Alice.M);
+        Bob.calc_M(Alice.M, Bob.Get_ax());
+        x2 += char(Bob.M);
+        Alice.calc_M(Bob.M, Alice.Get_ay());
+        x3 += char(Alice.M);
+        Bob.calc_M(Alice.M, Bob.Get_ay());
+        decrypted_text += char(Bob.M);
     }
 
     cout << "Alice: " << str << endl;
     cout << "Alice --> Bob: " << x1 << endl;
     cout << "Bob --> Alice: " << x2 << endl;
     cout << "Alice --> Bob: " << x3 << endl;
-    cout << "Bob: " << x4 << endl;
+    cout << "Bob: " << decrypted_text << endl;
 }
 
-string print_msg(string input) {
-    int64_t value = 0;
-    string output;
-    for (auto x : input) {
-        if (x != ' ') {
-            value *= 10;
-            value += x - '0';
-        }
-        else {
-            output += char(value);
-            value = 0;
-        }
+void elgamal(string str) {
+    ElGamal Alice, Bob;
+    Alice.gen_p();
+    Alice.gen_g();
+    Alice.selectPrivateKey();
+    Alice.calcPublicKey();
+
+    Bob.p = Alice.p;
+    Bob.g = Alice.g;
+    Bob.public_key = Alice.public_key;
+
+    Bob.select_k();
+    Bob.calc_A();
+    Alice.a = Bob.a;
+
+    string decrypted_text;
+
+    cout << "Bob: " << str << " --> Message: ";
+    for (auto x : str) {
+        Bob.M = x;
+        Bob.calc_B();
+        cout << Bob.b << " ";
+        Alice.b = Bob.b;
+        Alice.calc_M();
+        decrypted_text += char(Alice.M);
     }
-    return output;
+    cout << " --> Alice: " << decrypted_text;
 }
 
 int main() {
     SetConsoleCP(1251);
     SetConsoleOutputCP(1251);
+    cout << "Выберите протокол шифрования:\n";
+    cout << "1) Алгоритм Диффи - Хеллмана;\n";
+    cout << "2) RSA;\n";
+    cout << "3) Трёхэтапный протокол Шамира;\n";
+    cout << "4) Схема Эль-Гамаля.\n";
+    int num = 0;
+    cin >> num;
+    while (num < 1 || num > 4) {
+        cout << "Введите число 1-4!" << endl;
+        cin >> num;
+    }
+    
+    cin.get();
 
-    //diffiehellman();
+    cout << "Введите текст, который хотите зашифровать-дешифровать: ";
+    string str, decrypted_text;
+    getline(cin, str);
+    for (int i = 0; i < 100; i++) cout << '/';
+    cout << endl;
 
-    rsa();
-
-    //shamir();
-
-   /* string str = "Hello, World!", enc_text, dec_text;
-    enc_text = dh.encrypt(str);
-    cout << enc_text << endl;
-    dec_text = dh.decrypt(enc_text);
-    cout << dec_text << endl;*/
-
-    /*RSA rsa;
-    string str = "Hello, World!", enc_text, dec_text;
-    enc_text = rsa.encrypt(str);
-    cout << enc_text << endl;
-    dec_text = rsa.decrypt(enc_text);
-    cout << dec_text << endl;*/
-
-    /*Shamir shamir;
-    string str = "Hello, World!", enc_text, dec_text;
-    enc_text = shamir.encrypt(str);
-    cout << enc_text << endl;
-    dec_text = shamir.decrypt(enc_text);
-    cout << dec_text << endl;*/
-
-    /*ElGamal elgamal;
-    string str = "Hello, World!", enc_text, dec_text;
-    enc_text = elgamal.encrypt(str);
-    cout << enc_text << endl;
-    dec_text = elgamal.decrypt(enc_text);
-    cout << dec_text << endl;*/
+    switch (num) {
+    case 1:
+        cout << "Алгоритм Диффи - Хеллмана:\n";
+        diffiehellman(str);
+        break;
+    case 2:
+        cout << "RSA:\n";
+        rsa(str);
+        break;
+    case 3: 
+        cout << "Трёхэтапный протокол Шамира:\n";
+        shamir(str);
+        break;
+    case 4:
+        cout << "Схема Эль-Гамаля:\n";
+        elgamal(str);
+        break;
+    }
 }
