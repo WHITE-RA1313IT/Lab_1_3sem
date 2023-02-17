@@ -1,4 +1,6 @@
-#include "Math.h"
+#include <cstdint>
+#include <random>
+using namespace std;
 
 int64_t generator(int64_t num) {
     random_device rd;

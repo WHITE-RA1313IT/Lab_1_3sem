@@ -1,8 +1,8 @@
 ﻿#include <iostream>
+#include "Math.h"
 #include <Windows.h>
 #include <string>
 #include <cstdint>
-#include "Math.h"
 using namespace std;
 
 class DH {
